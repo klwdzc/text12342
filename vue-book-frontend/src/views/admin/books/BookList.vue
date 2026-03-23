@@ -106,13 +106,13 @@
         <el-form-item label="作者" prop="bookAuthor">
           <el-input v-model="form.bookAuthor" placeholder="请输入作者" />
         </el-form-item>
-        <el-form-item label="分类" prop="bookType">
-          <el-select v-model="form.bookType" placeholder="请选择图书分类" style="width: 100%">
+        <el-form-item label="分类" prop="bookTypeNumber">
+          <el-select v-model="form.bookTypeNumber" placeholder="请选择图书分类" style="width: 100%">
             <el-option
               v-for="item in typeList"
               :key="item.typeId"
               :label="item.typeName"
-              :value="item.typeName"
+              :value="item.typeId"
             />
           </el-select>
         </el-form-item>
@@ -196,6 +196,7 @@ const form = reactive({
   bookNumber: 0,
   bookName: '',
   bookAuthor: '',
+  bookTypeNumber: null,
   bookType: '',
   bookLibrary: '',
   bookLocation: '',
@@ -207,7 +208,7 @@ const rules = {
   bookNumber: [{ required: true, message: '请输入图书编号', trigger: 'blur' }],
   bookName: [{ required: true, message: '请输入书名', trigger: 'blur' }],
   bookAuthor: [{ required: true, message: '请输入作者', trigger: 'blur' }],
-  bookType: [{ required: true, message: '请输入分类', trigger: 'blur' }],
+  bookTypeNumber: [{ required: true, message: '请选择分类', trigger: 'change' }],
   bookLibrary: [{ required: true, message: '请输入图书馆', trigger: 'blur' }],
   bookLocation: [{ required: true, message: '请输入位置', trigger: 'blur' }],
   bookStatus: [{ required: true, message: '请选择状态', trigger: 'change' }],
@@ -293,6 +294,8 @@ const handleEdit = async (row) => {
     const res = await getBookInfo(row.bookId)
     if (res.status === 200) {
       Object.assign(form, res.data)
+      const currentType = typeList.value.find(item => item.typeName === res.data.bookType)
+      form.bookTypeNumber = currentType?.typeId ?? null
       dialogVisible.value = true
     }
   } catch (error) {
@@ -349,7 +352,11 @@ const handleSubmit = async () => {
     if (valid) {
       await loadingManager.wrap(async () => {
         const api = form.bookId ? updateBook : addBook
-        const res = await api(form)
+        const payload = {
+          ...form,
+          bookType: typeList.value.find(item => item.typeId === form.bookTypeNumber)?.typeName || form.bookType,
+        }
+        const res = await api(payload)
 
         if (res.status === 200) {
           message.success(form.bookId ? '更新成功' : '添加成功')
@@ -399,6 +406,7 @@ const resetForm = () => {
     bookNumber: 0,
     bookName: '',
     bookAuthor: '',
+    bookTypeNumber: null,
     bookType: '',
     bookLibrary: '',
     bookLocation: '',
