@@ -343,6 +343,17 @@ public class BooksServiceImpl extends ServiceImpl<BooksMapper, Books>
         return result;
     }
 
+    @Override
+    public R<Books> getBookInformationByBookNumber(Long bookNumber) {
+        LambdaQueryWrapper<Books> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Books::getBookNumber, bookNumber);
+        Books books = this.getOne(queryWrapper);
+        if (books == null) {
+            return R.error("获取图书信息错误");
+        }
+        return R.success(books, "获取图书信息成功");
+    }
+
     /**
      * 1.判断books是否为空
      * 2.为空返回错误信息
@@ -422,7 +433,6 @@ public class BooksServiceImpl extends ServiceImpl<BooksMapper, Books>
     }
 
 }
-
 
 
 

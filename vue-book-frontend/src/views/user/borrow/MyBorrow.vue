@@ -85,17 +85,17 @@ const loadBorrowList = async () => {
         try {
           // 根据图书编号查询图书信息
           const bookRes = await request({
-            url: '/bookadmin/query_book/' + record.bookNumber,
+            url: '/user/get_book_information/' + record.bookNumber,
             method: 'get',
           })
 
-          if (bookRes.code === 200 || bookRes.status === 200) {
+          if ((bookRes.code === 200 || bookRes.status === 200) && bookRes.data) {
             // 合并借阅记录和图书信息
             return {
               ...record,
-              bookName: bookRes.data?.bookName || '未知图书',
-              bookAuthor: bookRes.data?.bookAuthor || '未知作者',
-              bookType: bookRes.data?.bookType || '未分类',
+              bookName: bookRes.data.bookName || '未知图书',
+              bookAuthor: bookRes.data.bookAuthor || '未知作者',
+              bookType: bookRes.data.bookType || '未分类',
             }
           }
         } catch (error) {

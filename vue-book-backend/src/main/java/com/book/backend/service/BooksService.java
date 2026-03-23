@@ -68,6 +68,13 @@ public interface BooksService extends IService<Books> {
      */
     R<Books> getBookInformationByBookId( Integer bookId);
     /**
+     * 根据图书编号获得相对应的图书信息
+     *
+     * @param bookNumber 图书编号
+     * @return R<Books>
+     */
+    R<Books> getBookInformationByBookNumber(Long bookNumber);
+    /**
      * 根据前端传输的图书信息更新图书
      *
      * @param books 图书
