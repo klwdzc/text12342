@@ -203,6 +203,8 @@ const form = reactive({
   bookDescription: '',
 })
 
+const isSuccess = (res) => res?.code === 200 || res?.status === 200
+
 const rules = {
   bookNumber: [{ required: true, message: '请输入图书编号', trigger: 'blur' }],
   bookName: [{ required: true, message: '请输入书名', trigger: 'blur' }],
@@ -225,7 +227,7 @@ const loadBookList = async () => {
       query: searchForm.content,
     })
 
-    if (res.code === 200 || res.status === 200) {
+    if (isSuccess(res)) {
       // 确保正确获取分页数据
       tableData.value = res.data?.records || res.data?.data || []
       total.value = res.data?.total || 0
@@ -242,7 +244,7 @@ const loadBookList = async () => {
 const loadTypeList = async () => {
   try {
     const res = await getBookTypeList()
-    if (res.code === 200 || res.status === 200) {
+    if (isSuccess(res)) {
       typeList.value = res.data || []
     }
   } catch (error) {
@@ -291,7 +293,7 @@ const handleEdit = async (row) => {
 
   try {
     const res = await getBookInfo(row.bookId)
-    if (res.status === 200) {
+    if (isSuccess(res)) {
       Object.assign(form, res.data)
       dialogVisible.value = true
     }
@@ -311,7 +313,7 @@ const handleDelete = (row) => {
   }).then(async () => {
     await loadingManager.wrap(async () => {
       const res = await deleteBook(row.bookId)
-      if (res.status === 200) {
+      if (isSuccess(res)) {
         message.success('删除成功')
         loadBookList()
       }
@@ -331,7 +333,7 @@ const handleBatchDelete = () => {
     await loadingManager.wrap(async () => {
       const booksToDelete = tableData.value.filter(book => selectedIds.value.includes(book.bookId))
       const res = await deleteBookBatch(booksToDelete)
-      if (res.status === 200) {
+      if (isSuccess(res)) {
         message.success('批量删除成功')
         loadBookList()
       }
@@ -351,7 +353,7 @@ const handleSubmit = async () => {
         const api = form.bookId ? updateBook : addBook
         const res = await api(form)
 
-        if (res.status === 200) {
+        if (isSuccess(res)) {
           message.success(form.bookId ? '更新成功' : '添加成功')
           dialogVisible.value = false
           loadBookList()
@@ -382,7 +384,7 @@ const handleUploadConfirm = async () => {
 
   try {
     const res = await uploadExcel(uploadFile.value)
-    if (res.status === 200) {
+    if (isSuccess(res)) {
       ElMessage.success('导入成功')
       uploadDialogVisible.value = false
       loadBookList()
