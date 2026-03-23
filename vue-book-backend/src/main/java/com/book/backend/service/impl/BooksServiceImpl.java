@@ -33,8 +33,7 @@ import java.util.*;
  * @createDate 2023-02-04 18:07:43
  */
 @Service
-public class BooksServiceImpl extends ServiceImpl<BooksMapper, Books>
-        implements BooksService {
+public class BooksServiceImpl extends ServiceImpl<BooksMapper, Books>implements BooksService {
     @Resource
     private UsersService usersService;
     @Resource
@@ -341,6 +340,17 @@ public class BooksServiceImpl extends ServiceImpl<BooksMapper, Books>
         result.setData(books);
         result.setMsg("获取图书信息成功");
         return result;
+    }
+
+    @Override
+    public R<Books> getBookInformationByBookNumber(Long bookNumber) {
+        LambdaQueryWrapper<Books> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Books::getBookNumber, bookNumber);
+        Books books = this.getOne(queryWrapper);
+        if (books == null) {
+            return R.error("获取图书信息错误");
+        }
+        return R.success(books, "获取图书信息成功");
     }
 
     /**

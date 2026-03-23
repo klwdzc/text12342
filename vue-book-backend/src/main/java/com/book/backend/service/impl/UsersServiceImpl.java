@@ -33,7 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 
 /**
- * @author 程序员小白条
+ * @author
  * @description 针对表【t_users】的数据库操作Service实现
  * @createDate 2023-02-02 16:20:02
  */

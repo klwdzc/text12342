@@ -23,6 +23,9 @@ public class BooksBorrow implements Serializable {
     @TableId(type = IdType.AUTO)
     private Integer borrowId;
 
+    @TableField(exist = false)
+    private String bookName;
+
     /**
      * 借阅证编号 固定11位随机生成 用户和图书关联的唯一标识
      */

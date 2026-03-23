@@ -45,107 +45,105 @@
   </div>
 </template>
 
-<script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import request from '@/utils/request'
+ <script setup>
+ import { ref, reactive, onMounted } from 'vue'
+ import { ElMessage } from 'element-plus'
+ import request from '@/utils/request'
 
-const loading = ref(false)
-const borrowList = ref([])
-const currentPage = ref(1)
-const pageSize = ref(10)
-const total = ref(0)
+ const loading = ref(false)
+ const borrowList = ref([])
+ const currentPage = ref(1)
+ const pageSize = ref(10)
+ const total = ref(0)
 
-// 加载借阅记录
-const loadBorrowList = async () => {
-  try {
-    loading.value = true
-    const userId = localStorage.getItem('userId')
-    if (!userId) {
-      ElMessage.error('未找到用户 ID')
-      return
-    }
+ // 加载借阅记录
+ const loadBorrowList = async () => {
+   try {
+     loading.value = true
+     const userId = localStorage.getItem('userId')
+     if (!userId) {
+       ElMessage.error('未找到用户 ID')
+       return
+     }
 
-    const res = await request({
-      url: '/user/get_bookborrow',
-      method: 'post',
-      data: {
-        pageNum: currentPage.value,
-        pageSize: pageSize.value,
-        userId: parseInt(userId),
-      },
-    })
+     const res = await request({
+       url: '/user/get_bookborrow',
+       method: 'post',
+       data: {
+         pageNum: currentPage.value,
+         pageSize: pageSize.value,
+         userId: parseInt(userId),
+       },
+     })
 
-    if (res.code === 200 || res.status === 200) {
-      const records = res.data.records || []
-      total.value = Number(res.data.total) || 0
+     if (res.code === 200 || res.status === 200) {
+       const records = res.data.records || []
+       total.value = Number(res.data.total) || 0
 
-      // 遍历借阅记录，查询每本图书的详细信息
-      const enrichedList = await Promise.all(records.map(async (record) => {
-        try {
-          // 根据图书编号查询图书信息
-          const bookRes = await request({
-            url: '/bookadmin/query_book/' + record.bookNumber,
-            method: 'get',
-          })
+       // 遍历借阅记录，查询每本图书的详细信息
+       const enrichedList = await Promise.all(records.map(async (record) => {
+         try {
+           // 根据图书编号查询图书信息
+           const bookRes = await request({
+             url: '/user/get_book_information/' + record.bookNumber,
+             method: 'get',
+           })
 
-          if (bookRes.code === 200 || bookRes.status === 200) {
-            // 合并借阅记录和图书信息
-            return {
-              ...record,
-              bookName: bookRes.data?.bookName || '未知图书',
-              bookAuthor: bookRes.data?.bookAuthor || '未知作者',
-              bookType: bookRes.data?.bookType || '未分类',
-            }
-          }
-        } catch (error) {
-          console.error('查询图书信息失败:', error)
-        }
-        // 如果查询失败，返回原始记录
-        return {
-          ...record,
-          bookName: '未知图书',
-          bookAuthor: '未知作者',
-          bookType: '未分类',
-        }
-      }))
+           if ((bookRes.code === 200 || bookRes.status === 200) && bookRes.data) {
+             // 合并借阅记录和图书信息
+             return {
+               ...record,
+               bookName: bookRes.data.bookName || '未知图书',
+               bookAuthor: bookRes.data.bookAuthor || '未知作者',
+               bookType: bookRes.data.bookType || '未分类',
+             }
+           }
+         } catch (error) {
+           console.error('查询图书信息失败:', error)
+         }
+         // 如果查询失败，返回原始记录
+         return {
+           ...record,
+           bookName: '未知图书',
+           bookAuthor: '未知作者',
+           bookType: '未分类',
+         }
+       }))
 
-      borrowList.value = enrichedList
-    } else {
-      // 没有数据时不显示错误提示，正常业务场景
-      borrowList.value = []
-      total.value = 0
-    }
-  } catch (error) {
-    console.error('加载借阅记录失败:', error)
-    // 只在真正出错时显示提示
-    if (error.message && !error.message.includes('获取不到')) {
-      ElMessage.error('加载借阅记录失败')
-    }
-    borrowList.value = []
-    total.value = 0
-  } finally {
-    loading.value = false
-  }
-}
+       borrowList.value = enrichedList
+     } else {
+       // 没有数据时不显示错误提示，正常业务场景
+       borrowList.value = []
+       total.value = 0
+     }
+   } catch (error) {
+     console.error('加载借阅记录失败:', error)
+     // 只在真正出错时显示提示
+     if (error.message && !error.message.includes('获取不到')) {
+       ElMessage.error('加载借阅记录失败')
+     }
+     borrowList.value = []
+     total.value = 0
+   } finally {
+     loading.value = false
+   }
+ }
 
+ // 分页处理
+ const handleSizeChange = (val) => {
+   pageSize.value = val
+   loadBorrowList()
+ }
 
+ const handleCurrentChange = (val) => {
+   currentPage.value = val
+   loadBorrowList()
+ }
 
-// 分页处理
-const handleSizeChange = (val) => {
-  pageSize.value = val
-  loadBorrowList()
-}
-
-const handleCurrentChange = (val) => {
-  currentPage.value = val
-  loadBorrowList()
-}
-
-onMounted(() => {
-  loadBorrowList()
-})
-</script>
+ onMounted(() => {
+   loadBorrowList()
+ })
+ </script>
 
 <style scoped>
 .borrow-container {

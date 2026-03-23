@@ -153,7 +153,6 @@ public class BookAdminsServiceImpl extends ServiceImpl<BookAdminsMapper, BookAdm
      */
     @Override
     public R<Page<ViolationDTO>> getBorrowStatement(BasePage basePage) {
-
         // 页数
         int pageSize = basePage.getPageSize();
         // 页码
@@ -162,69 +161,79 @@ public class BookAdminsServiceImpl extends ServiceImpl<BookAdminsMapper, BookAdm
         String condition = basePage.getCondition();
         // 内容
         String query = basePage.getQuery();
-        Page<Violation> pageInfo = new Page<>(pageNum, pageSize);
-        Page<ViolationDTO> dtoPage = new Page<>(pageNum, pageSize);
+
+        // 使用 BooksBorrow 的分页对象
+        Page<BooksBorrow> borrowPageInfo = new Page<>(pageNum, pageSize);
+
         R<Page<ViolationDTO>> result = new R<>();
-        // 有空值的情况
+
+        // 查询借阅记录（未归还的 - 这才是借书报表）
         if (StringUtils.isBlank(condition) || StringUtils.isBlank(query)) {
-            LambdaQueryWrapper<Violation> queryWrapper = new LambdaQueryWrapper<>();
-            queryWrapper.isNotNull(Violation::getReturnDate).orderByAsc(Violation::getBorrowDate);
-            Page<Violation> page = violationService.page(pageInfo, queryWrapper);
-            if (page.getTotal() == 0) {
+            LambdaQueryWrapper<BooksBorrow> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.isNull(BooksBorrow::getReturnDate)
+                    .orderByDesc(BooksBorrow::getBorrowDate);
+            Page<BooksBorrow> borrowPage = booksBorrowService.page(borrowPageInfo, queryWrapper);
+            if (borrowPage.getTotal() == 0) {
                 return R.error("借书报表为空");
             }
-            // 不为空，封装为DTO返回
-            BeanUtils.copyProperties(pageInfo, dtoPage, "records");
-            List<Violation> records = page.getRecords();
-            List<ViolationDTO> dtoList = records.stream().map(item -> {
-                ViolationDTO violationDTO = new ViolationDTO();
-                BeanUtils.copyProperties(item, violationDTO);
-                // 获取图书管理员id
-                Integer violationAdminId = item.getViolationAdminId();
-                // 根据id查询用户名
-                LambdaQueryWrapper<BookAdmins> queryWrapper1 = new LambdaQueryWrapper<>();
-                queryWrapper1.eq(BookAdmins::getBookAdminId, violationAdminId);
-                BookAdmins bookAdmins = this.getOne(queryWrapper1);
-                if (bookAdmins != null) {
-                    // 获取用户名
-                    String username = bookAdmins.getUsername();
-                    violationDTO.setViolationAdmin(username);
-                }
-                return violationDTO;
-            }).collect(Collectors.toList());
+
+            // 将 BooksBorrow 转换为 ViolationDTO（为了适配前端）
+            List<ViolationDTO> dtoList = borrowPage.getRecords().stream().map(borrow -> {
+                ViolationDTO dto = new ViolationDTO();
+                dto.setCardNumber(borrow.getCardNumber());
+                dto.setBookNumber(borrow.getBookNumber());
+                dto.setBorrowDate(borrow.getBorrowDate());
+                dto.setCloseDate(borrow.getCloseDate());
+                dto.setReturnDate(null); // 未归还
+                dto.setRemark("");
+                return dto;
+            }).collect(java.util.stream.Collectors.toList());
+
+            Page<ViolationDTO> dtoPage = new Page<>(pageNum, pageSize);
             dtoPage.setRecords(dtoList);
+            dtoPage.setTotal(borrowPage.getTotal());
+
             result.setData(dtoPage);
             result.setStatus(200);
             result.setMsg("获取借书报表信息成功");
             return result;
         }
-        QueryWrapper<Violation> queryWrapper = new QueryWrapper<>();
-        queryWrapper.like(condition, query).isNotNull("return_date");
-        Page<Violation> page = violationService.page(pageInfo, queryWrapper);
-        if (page.getTotal() == 0) {
+
+        // 有条件查询
+        QueryWrapper<BooksBorrow> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("return_date", null); // 未归还
+
+        if ("cardNumber".equals(condition)) {
+            queryWrapper.eq("card_number", query);
+        }
+
+        Page<BooksBorrow> borrowPage = booksBorrowService.page(borrowPageInfo, queryWrapper);
+        if (borrowPage.getTotal() == 0) {
             return R.error("借书报表为空");
         }
-        BeanUtils.copyProperties(pageInfo, dtoPage, "records");
-        List<Violation> records = pageInfo.getRecords();
-        List<ViolationDTO> dtoList = records.stream().map(item -> {
-            ViolationDTO violationDTO = new ViolationDTO();
-            BeanUtils.copyProperties(item, violationDTO);
-            Integer violationAdminId = item.getViolationAdminId();
-            LambdaQueryWrapper<BookAdmins> queryWrapper1 = new LambdaQueryWrapper<>();
-            queryWrapper1.eq(BookAdmins::getBookAdminId, violationAdminId);
-            BookAdmins bookAdmins = this.getOne(queryWrapper1);
-            if (bookAdmins != null) {
-                String username = bookAdmins.getUsername();
-                violationDTO.setViolationAdmin(username);
-            }
-            return violationDTO;
-        }).collect(Collectors.toList());
+
+        // 转换为 DTO
+        List<ViolationDTO> dtoList = borrowPage.getRecords().stream().map(borrow -> {
+            ViolationDTO dto = new ViolationDTO();
+            dto.setCardNumber(borrow.getCardNumber());
+            dto.setBookNumber(borrow.getBookNumber());
+            dto.setBorrowDate(borrow.getBorrowDate());
+            dto.setCloseDate(borrow.getCloseDate());
+            dto.setReturnDate(null);
+            dto.setRemark("");
+            return dto;
+        }).collect(java.util.stream.Collectors.toList());
+
+        Page<ViolationDTO> dtoPage = new Page<>(pageNum, pageSize);
         dtoPage.setRecords(dtoList);
+        dtoPage.setTotal(borrowPage.getTotal());
+
         result.setData(dtoPage);
         result.setStatus(200);
         result.setMsg("获取借书报表信息成功");
         return result;
     }
+
 
     @Override
     public R<Page<BookAdmins>> getBookAdminListByPage(BasePage basePage) {

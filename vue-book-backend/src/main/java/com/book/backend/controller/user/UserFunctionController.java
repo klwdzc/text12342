@@ -98,6 +98,18 @@ public class UserFunctionController {
         return usersService.getUserByCardNumber(cardNumber);
     }
 
+    /**
+     * 根据图书编号查询图书信息
+     *
+     * @param bookNumber 图书编号
+     * @return R<Books>
+     */
+    @GetMapping("get_book_information/{bookNumber}")
+    @Operation(summary = "根据图书编号查询图书信息")
+    public R<Books> getBookInformationByBookNumber(@PathVariable("bookNumber") Long bookNumber) {
+        return booksService.getBookInformationByBookNumber(bookNumber);
+    }
+
 
     /**
      * 修改密码

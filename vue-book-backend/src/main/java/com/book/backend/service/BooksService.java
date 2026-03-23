@@ -26,6 +26,13 @@ public interface BooksService extends IService<Books> {
     R<Page<Books>> searchBookPage(BasePage basePage);
 
     /**
+     * 根据图书编号获得相对应的图书信息
+     *
+     * @param bookNumber 图书编号
+     * @return R<Books>
+     */
+    R<Books> getBookInformationByBookNumber(Long bookNumber);
+    /**
      * 借阅图书根据借阅证号和图书编号
      *
      * @return R

@@ -42,11 +42,11 @@
             <el-descriptions-item label="应还日期">{{ borrowInfo.returnDate }}</el-descriptions-item>
             <el-descriptions-item label="实还日期">
               <el-date-picker
-                v-model="returnForm.actualReturnDate"
-                type="date"
-                placeholder="选择实还日期"
-                :disabled-date="disabledDate"
-                style="width: 100%"
+                  v-model="returnForm.actualReturnDate"
+                  type="date"
+                  placeholder="选择实还日期"
+                  :disabled-date="disabledDate"
+                  style="width: 100%"
               />
             </el-descriptions-item>
             <el-descriptions-item label="是否逾期">
@@ -59,11 +59,11 @@
 
         <!-- 违章信息（如果逾期） -->
         <el-alert
-          v-if="violationInfo && violationInfo.isOverdue"
-          title="逾期提示"
-          type="warning"
-          :closable="false"
-          style="margin-bottom: 20px"
+            v-if="violationInfo && violationInfo.isOverdue"
+            title="逾期提示"
+            type="warning"
+            :closable="false"
+            style="margin-bottom: 20px"
         >
           <p>该图书已逾期，逾期天数：{{ violationInfo.overdueDays }}天</p>
           <p>违章罚款金额：¥{{ parseFloat(violationInfo.fineAmount || 0).toFixed(2) }}</p>
@@ -111,8 +111,6 @@ const bookInfo = ref(null)
 const borrowInfo = ref(null)
 const violationInfo = ref(null)
 
-// ... existing code ...
-
 // 查询图书信息
 const handleQueryBook = async () => {
   if (!returnForm.bookNumber) {
@@ -124,10 +122,7 @@ const handleQueryBook = async () => {
     // 查询图书是否被借出
     const res = await queryBookExpire(returnForm.bookNumber)
     if (res.code === 200 || res.status === 200) {
-      // 图书已借出，继续查询借阅信息
-      // 获取图书详细信息
-      await loadBookDetail()
-      // 获取借阅和逾期信息
+      // 图书已借出，继续查询借阅和图书信息
       await loadBorrowInfo()
     } else {
       // 图书未借出或不存在
@@ -142,64 +137,29 @@ const handleQueryBook = async () => {
   }
 }
 
-// 加载图书详情
-const loadBookDetail = async () => {
-  try {
-    // 根据图书编号查询图书详细信息
-    const res = await request({
-      url: `/bookadmin/query_book/${returnForm.bookNumber}`,
-      method: 'get',
-    })
-
-    if (res.code === 200 || res.status === 200 && res.data) {
-      bookInfo.value = {
-        bookName: res.data.bookName,
-        bookAuthor: res.data.bookAuthor,
-        bookType: res.data.bookType,
-        bookLibrary: res.data.bookLibrary,
-        bookLocation: res.data.bookLocation,
-        bookStatus: res.data.bookStatus,
-      }
-    } else {
-      bookInfo.value = {
-        bookName: '未知图书',
-        bookAuthor: '未知',
-        bookType: '未知',
-        bookLibrary: '未知',
-        bookLocation: '未知',
-        bookStatus: '已借出',
-      }
-    }
-  } catch (error) {
-    console.error('查询图书详情失败:', error)
-    bookInfo.value = {
-      bookName: '未知图书',
-      bookAuthor: '未知',
-      bookType: '未知',
-      bookLibrary: '未知',
-      bookLocation: '未知',
-      bookStatus: '已借出',
-    }
-  }
-}
-
-// ... existing code ...
-
-
 // 加载借阅信息
 const loadBorrowInfo = async () => {
   try {
     const res = await queryExpireInfo(returnForm.bookNumber)
-    if (res.code === 200 && res.data) {
+    if ((res.code === 200 || res.status === 200) && res.data) {
       const data = res.data
+      bookInfo.value = {
+        bookName: data.bookName || '未知图书',
+        bookAuthor: data.bookAuthor || '未知',
+        bookType: data.bookType || '未知',
+        bookLibrary: data.bookLibrary || '未知',
+        bookLocation: data.bookLocation || '未知',
+        bookStatus: data.bookStatus || '已借出',
+      }
+
       borrowInfo.value = {
-        cardNumber: data.cardNumber || data.userId,
+        cardNumber: data.cardNumber,
         cardName: data.cardName || '未知',
         borrowDate: data.borrowDate,
-        returnDate: data.shouldReturnDate || data.returnDate,
-        isOverdue: data.isOverdue || false,
+        returnDate: data.shouldReturnDate || data.closeDate || data.returnDate,
+        isOverdue: Boolean(data.isOverdue),
       }
-      
+
       if (data.isOverdue) {
         violationInfo.value = {
           isOverdue: true,
@@ -223,19 +183,20 @@ const disabledDate = (time) => {
 // 提交还书
 const handleSubmit = async () => {
   if (!formRef.value) return
-  
+
   await formRef.value.validate(async (valid) => {
     if (valid) {
       submitLoading.value = true
-      
+
       try {
+        const bookAdminId = parseInt(localStorage.getItem('bookAdminId') || '0', 10)
         const res = await returnBook({
           bookNumber: returnForm.bookNumber,
-          actualReturnDate: formatDate(returnForm.actualReturnDate),
-          remark: returnForm.remark,
-          fineAmount: violationInfo.value?.fineAmount || 0,
+          returnDate: formatDateTime(returnForm.actualReturnDate),
+          violationMessage: returnForm.remark || `办理还书${violationInfo.value?.isOverdue ? '（逾期）' : ''}`,
+          violationAdminId: Number.isNaN(bookAdminId) ? null : bookAdminId,
         })
-        
+
         if (res.code === 200) {
           ElMessage.success('还书成功')
           handleReset()
@@ -252,14 +213,17 @@ const handleSubmit = async () => {
   })
 }
 
-// 格式化日期为 yyyy-MM-dd
-const formatDate = (date) => {
+// 格式化日期为 yyyy-MM-dd HH:mm:ss
+const formatDateTime = (date) => {
   if (!date) return ''
   const d = new Date(date)
   const year = d.getFullYear()
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+  const hours = String(d.getHours()).padStart(2, '0')
+  const minutes = String(d.getMinutes()).padStart(2, '0')
+  const seconds = String(d.getSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
 // 重置表单
